@@ -1,0 +1,13 @@
+.idea
+nbproject
+.buildpath
+.project
+.settings
+.DS_Store
+
+var
+vendor
+composer.phar
+
+phpunit.xml
+_generated
