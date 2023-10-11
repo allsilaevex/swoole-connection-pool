@@ -18,8 +18,8 @@
             "phpstan analyse -c phpstan.neon --no-progress --memory-limit=1G",
             "phpstan analyse -c phpstan-tests.neon --no-progress --memory-limit=1G"
         ],
-        "phpunit": "phpunit --no-coverage",
-        "phpunit-coverage": "phpunit --coverage-html var/phpunit/html-coverage",
+        "phpunit": "php bin/co-phpunit --no-coverage",
+        "phpunit-coverage": "php bin/co-phpunit --coverage-html var/phpunit/html-coverage",
         "test": [
             "@ecs",
             "@phpstan",
@@ -27,16 +27,18 @@
         ]
     },
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "ext-swoole": "^5.1"
     },
     "require-dev": {
+        "swoole/ide-helper": "5.0.3",
+        "phpunit/phpunit": "10.3.*",
         "phpstan/phpstan": "1.10.*",
         "phpstan/phpstan-phpunit": "1.3.*",
         "phpstan/phpstan-strict-rules": "1.5.*",
         "slevomat/coding-standard": "8.13.*",
         "symplify/coding-standard": "12.0.*",
-        "symplify/easy-coding-standard": "12.0.*",
-        "phpunit/phpunit": "10.3.*"
+        "symplify/easy-coding-standard": "12.0.*"
     },
     "config": {
         "allow-plugins": {

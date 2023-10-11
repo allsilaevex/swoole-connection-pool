@@ -5,20 +5,40 @@ declare(strict_types=1);
 namespace Allsilaevex\ConnectionPool\Test\Unit;
 
 use PHPUnit\Framework\TestCase;
-use Allsilaevex\ConnectionPool\Connection;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Allsilaevex\ConnectionPool\ConnectionPool;
+use Allsilaevex\ConnectionPool\ConnectionFactoryInterface;
 
 #[CoversClass(ConnectionPool::class)]
-#[UsesClass(Connection::class)]
+#[UsesClass(ConnectionFactoryInterface::class)]
 class ConnectionPoolTest extends TestCase
 {
-    public function testConnectionIsConnected(): void
+    public function testExceptionOnEmptyPool(): void
     {
-        $connectionPool = new ConnectionPool();
-        $connection = $connectionPool->borrow();
+        $this->expectException(\RuntimeException::class);
 
-        static::assertTrue($connection->isConnected());
+        $factoryMock = $this->createMock(ConnectionFactoryInterface::class);
+        $connectionPool = new ConnectionPool(1, $factoryMock);
+
+        $connectionPool->borrow();
+        $connectionPool->borrow();
+    }
+
+    public function testPoolOverflowTolerate(): void
+    {
+        $factoryMock = $this->createMock(ConnectionFactoryInterface::class);
+
+        $factoryMock
+            ->method('create')
+            ->willReturn(new \stdClass());
+
+        $connectionPool = new ConnectionPool(1, $factoryMock);
+
+        $unnecessaryConnection = $factoryMock->create();
+
+        $connectionPool->return($unnecessaryConnection);
+
+        static::assertNull($unnecessaryConnection);
     }
 }

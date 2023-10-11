@@ -5,5 +5,7 @@ parameters:
   level: 9
   paths:
     - tests
+  scanDirectories:
+    - vendor/swoole/ide-helper/src
   strictRules:
     allRules: true

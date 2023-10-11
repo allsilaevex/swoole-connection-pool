@@ -28,6 +28,8 @@ jobs:
 
       - name: "Install dependencies (Composer)"
         uses: "ramsey/composer-install@v2"
+        with:
+          composer-options: "--ignore-platform-req=ext-swoole"
 
       - name: "Check coding standards (easy-coding-standard)"
         run: "composer ecs"
@@ -47,6 +49,8 @@ jobs:
 
       - name: "Install dependencies (Composer)"
         uses: "ramsey/composer-install@v2"
+        with:
+          composer-options: "--ignore-platform-req=ext-swoole"
 
       - name: "Statically analyze code (PHPStan)"
         run: "composer phpstan -- --ansi"
@@ -62,6 +66,7 @@ jobs:
         uses: "shivammathur/setup-php@v2"
         with:
           php-version: "8.2"
+          extensions: "swoole"
           ini-values: "memory_limit=-1"
           coverage: "none"
 
