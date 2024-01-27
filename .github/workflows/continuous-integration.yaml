@@ -18,12 +18,12 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
 
       - name: "Install PHP"
         uses: "shivammathur/setup-php@v2"
         with:
-          php-version: "8.2"
+          php-version: "latest"
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
@@ -39,12 +39,12 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
 
       - name: "Install PHP"
         uses: "shivammathur/setup-php@v2"
         with:
-          php-version: "8.2"
+          php-version: "latest"
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
@@ -55,18 +55,29 @@ jobs:
       - name: "Statically analyze code (PHPStan)"
         run: "composer phpstan -- --ansi"
 
+      - name: "Statically analyze code (Psalm)"
+        run: "composer psalm -- --shepherd"
+
   unit-tests:
     name: "Unit Tests"
-    runs-on: "ubuntu-latest"
+    runs-on: ${{ matrix.operating-system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - "8.2"
+          - "8.3"
+        operating-system:
+          - "ubuntu-latest"
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v3"
+        uses: "actions/checkout@v4"
 
       - name: "Install PHP"
         uses: "shivammathur/setup-php@v2"
         with:
-          php-version: "8.2"
-          extensions: "swoole-5.1.0"
+          php-version: "${{ matrix.php-version }}"
+          extensions: "swoole-5.1"
           ini-values: "memory_limit=-1"
           coverage: "none"
 

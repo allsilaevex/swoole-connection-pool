@@ -1,19 +1,30 @@
 {
     "name": "allsilaevex/swoole-connection-pool",
     "description": "Swoole Connection Pool",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "pool",
+        "swoole"
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Allsilaevex\\ConnectionPool\\": "src"
+            "Allsilaevex\\Pool\\": "src/pool",
+            "Allsilaevex\\ConnectionPool\\": "src/connection-pool"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Allsilaevex\\ConnectionPool\\Test\\": "tests"
+            "Allsilaevex\\Pool\\Test\\": "tests/pool",
+            "Allsilaevex\\ConnectionPool\\Test\\": "tests/connection-pool"
         }
     },
     "scripts": {
         "ecs": "ecs check",
         "ecs-fix": "ecs check --fix",
+        "psalm": "psalm --show-info=false --config=psalm.xml",
         "phpstan": [
             "phpstan analyse -c phpstan.neon --no-progress --memory-limit=1G",
             "phpstan analyse -c phpstan-tests.neon --no-progress --memory-limit=1G"
@@ -22,15 +33,19 @@
         "phpunit-coverage": "php bin/co-phpunit --coverage-html var/phpunit/html-coverage",
         "test": [
             "@ecs",
+            "@psalm",
             "@phpstan",
             "@phpunit"
         ]
     },
     "require": {
         "php": "^8.2",
-        "ext-swoole": "^5.1"
+        "ext-swoole": "^5.1",
+        "psr/log": "3.0.0"
     },
     "require-dev": {
+        "vimeo/psalm": "5.18.*",
+        "psalm/plugin-phpunit": "0.18.*",
         "swoole/ide-helper": "5.0.3",
         "phpunit/phpunit": "10.3.*",
         "phpstan/phpstan": "1.10.*",
@@ -38,7 +53,8 @@
         "phpstan/phpstan-strict-rules": "1.5.*",
         "slevomat/coding-standard": "8.13.*",
         "symplify/coding-standard": "12.0.*",
-        "symplify/easy-coding-standard": "12.0.*"
+        "symplify/easy-coding-standard": "12.0.*",
+        "php-standard-library/psalm-plugin": "2.3.*"
     },
     "config": {
         "allow-plugins": {

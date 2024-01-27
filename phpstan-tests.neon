@@ -9,3 +9,5 @@ parameters:
     - vendor/swoole/ide-helper/src
   strictRules:
     allRules: true
+  checkImplicitMixed: true
+  checkBenevolentUnionTypes: true

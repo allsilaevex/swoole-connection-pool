@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Allsilaevex\ConnectionPool\ConnectionFactories;
 
 use PDO;
-use Allsilaevex\ConnectionPool\ConnectionFactoryInterface;
+use Allsilaevex\Pool\PoolItemFactoryInterface;
 
 /**
- * @implements ConnectionFactoryInterface<PDO>
+ * @implements PoolItemFactoryInterface<PDO>
  */
-readonly class PDOConnectionFactory implements ConnectionFactoryInterface
+readonly class PDOConnectionFactory implements PoolItemFactoryInterface
 {
     /**
      * @param  array<string, mixed>  $options
