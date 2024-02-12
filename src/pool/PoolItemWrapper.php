@@ -38,8 +38,8 @@ class PoolItemWrapper implements PoolItemWrapperInterface
     protected array $stateStatuses;
 
     /**
-     * @param  PoolItemFactoryInterface<TItem>                      $factory
-     * @param  TimerTaskSchedulerInterface<PoolItemWrapper<TItem>>  $timerTaskScheduler
+     * @param  PoolItemFactoryInterface<TItem>                               $factory
+     * @param  TimerTaskSchedulerInterface<PoolItemWrapperInterface<TItem>>  $timerTaskScheduler
      *
      * @throws Exceptions\PoolItemCreationException
      */
@@ -102,6 +102,8 @@ class PoolItemWrapper implements PoolItemWrapperInterface
     {
         // destruct first
         $this->item = null;
+
+        /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->item = $this->factory->create();
 
         $this->itemCreatedAt = hrtime(true);

@@ -329,7 +329,10 @@ class PoolTest extends TestCase
 
         $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
 
-        /** @var Pool<stdClass> $pool */
+        /**
+         * @var Pool<stdClass> $pool
+         * @psalm-suppress InvalidArgument
+         */
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig($size, .1, .1, true, true),

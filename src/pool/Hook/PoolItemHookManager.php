@@ -20,6 +20,7 @@ readonly class PoolItemHookManager implements PoolItemHookManagerInterface
      */
     public function __construct(array $hooks)
     {
+        /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->hooks = $this->groupHooks($hooks);
     }
 

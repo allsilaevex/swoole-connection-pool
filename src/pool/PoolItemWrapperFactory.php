@@ -14,7 +14,7 @@ class PoolItemWrapperFactory implements PoolItemWrapperFactoryInterface
 {
     /**
      * @param  PoolItemFactoryInterface<TItem>  $factory
-     * @param  TimerTaskSchedulerInterface<PoolItemWrapper<TItem>> $poolItemTimerTaskScheduler
+     * @param  TimerTaskSchedulerInterface<PoolItemWrapperInterface<TItem>> $poolItemTimerTaskScheduler
      */
     public function __construct(
         protected PoolItemFactoryInterface $factory,
@@ -29,6 +29,7 @@ class PoolItemWrapperFactory implements PoolItemWrapperFactoryInterface
      */
     public function create(): PoolItemWrapperInterface
     {
+        /** @psalm-suppress InvalidArgument */
         return new PoolItemWrapper(
             factory: $this->factory,
             timerTaskScheduler: clone $this->poolItemTimerTaskScheduler,

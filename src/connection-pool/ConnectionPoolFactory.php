@@ -213,6 +213,7 @@ class ConnectionPoolFactory
      */
     public function setKeepaliveChecker(KeepaliveCheckerInterface $keepaliveChecker): self
     {
+        /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->poolItemTimerTasks[] = new KeepaliveCheckTimerTask($keepaliveChecker);
 
         return $this;
@@ -241,13 +242,23 @@ class ConnectionPoolFactory
             new LeakDetectionTimerTask($this->leakDetectionThresholdSec, $this->leakDetectionThresholdSec, $this->logger),
         ]);
 
-        /** @var TimerTaskScheduler<PoolItemWrapper<TConnection>> $poolItemTimerTaskScheduler */
+        /** @var TimerTaskInterface<PoolItemWrapperInterface<TConnection>> $poolItemUpdaterTimerTask */
+        $poolItemUpdaterTimerTask = new PoolItemUpdaterTimerTask(
+            intervalSec: $this->maxLifetimeSec / 10,
+            maxLifetimeSec: $this->maxLifetimeSec,
+            maxItemReservingWaitingTimeSec: $this->maxItemReservingForUpdateWaitingTimeSec,
+        );
+
+        /** @var TimerTaskScheduler<PoolItemWrapperInterface<TConnection>> $poolItemTimerTaskScheduler */
         $poolItemTimerTaskScheduler = new TimerTaskScheduler([
-            new PoolItemUpdaterTimerTask($this->maxLifetimeSec / 10, $this->maxLifetimeSec, $this->maxItemReservingForUpdateWaitingTimeSec),
+            $poolItemUpdaterTimerTask,
             ...$this->poolItemTimerTasks,
         ]);
 
-        /** @var Pool<TConnection> $pool */
+        /**
+         * @var Pool<TConnection> $pool
+         * @psalm-suppress InvalidArgument
+         */
         $pool = new Pool(
             name: $name,
             config: $config,
