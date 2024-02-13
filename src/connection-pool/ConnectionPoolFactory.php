@@ -11,7 +11,6 @@ use Allsilaevex\Pool\Pool;
 use Psr\Log\LoggerInterface;
 use Allsilaevex\Pool\PoolConfig;
 use Allsilaevex\Pool\PoolInterface;
-use Allsilaevex\Pool\PoolItemWrapper;
 use Allsilaevex\Pool\PoolItemWrapperFactory;
 use Allsilaevex\Pool\Hook\PoolItemHookManager;
 use Allsilaevex\Pool\PoolItemFactoryInterface;
