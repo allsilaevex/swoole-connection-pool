@@ -20,6 +20,7 @@
         <file name="./vendor/swoole/ide-helper/src/swoole/Swoole/Timer.php"/>
         <file name="./vendor/swoole/ide-helper/src/swoole/Swoole/Coroutine.php"/>
         <file name="./vendor/swoole/ide-helper/src/swoole/Swoole/Coroutine/Channel.php"/>
+        <file name="./vendor/swoole/ide-helper/src/swoole_library/src/core/Coroutine/functions.php"/>
         <file name="./vendor/swoole/ide-helper/src/swoole_library/src/core/Coroutine/WaitGroup.php"/>
     </stubs>
 </psalm>
