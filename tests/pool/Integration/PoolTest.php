@@ -16,6 +16,8 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use Allsilaevex\Pool\PoolItemWrapperFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Allsilaevex\Pool\PoolItemFactoryInterface;
+use Allsilaevex\Pool\TimerTask\TimerTaskScheduler;
+use Allsilaevex\ConnectionPool\Tasks\ResizerTimerTask;
 use Allsilaevex\Pool\TimerTask\TimerTaskSchedulerInterface;
 
 use function mb_strlen;
@@ -24,6 +26,8 @@ use function mb_strlen;
 #[UsesClass(PoolConfig::class)]
 #[UsesClass(PoolMetrics::class)]
 #[UsesClass(PoolItemWrapper::class)]
+#[UsesClass(ResizerTimerTask::class)]
+#[UsesClass(TimerTaskScheduler::class)]
 #[UsesClass(PoolItemWrapperFactory::class)]
 class PoolTest extends TestCase
 {
