@@ -17,6 +17,7 @@
     },
     "autoload-dev": {
         "psr-4": {
+            "Allsilaevex\\Benchmark\\": "tests/benchmark",
             "Allsilaevex\\Pool\\Test\\": "tests/pool",
             "Allsilaevex\\ConnectionPool\\Test\\": "tests/connection-pool"
         }
@@ -29,12 +30,14 @@
             "phpstan analyse -c phpstan.neon --no-progress --memory-limit=1G",
             "phpstan analyse -c phpstan-tests.neon --no-progress --memory-limit=1G"
         ],
+        "phpbench": "phpbench run",
         "phpunit": "php bin/co-phpunit --no-coverage",
         "phpunit-coverage": "php bin/co-phpunit --coverage-html var/phpunit/html-coverage",
         "test": [
             "@ecs",
             "@psalm",
             "@phpstan",
+            "@phpbench",
             "@phpunit"
         ]
     },
@@ -54,6 +57,7 @@
         "slevomat/coding-standard": "8.13.*",
         "symplify/coding-standard": "12.0.*",
         "symplify/easy-coding-standard": "12.0.*",
+        "phpbench/phpbench": "1.2.*",
         "php-standard-library/psalm-plugin": "2.3.*"
     },
     "config": {

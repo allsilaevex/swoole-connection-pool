@@ -58,6 +58,35 @@ jobs:
       - name: "Statically analyze code (Psalm)"
         run: "composer psalm -- --shepherd"
 
+  benchmark:
+    name: "Benchmark"
+    needs: ["coding-standards", "static-analysis"]
+    runs-on: "ubuntu-latest"
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - "8.2"
+          - "8.3"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "${{ matrix.php-version }}"
+          extensions: "swoole-5.1"
+          ini-values: "memory_limit=-1"
+          coverage: "none"
+
+      - name: "Install dependencies (Composer)"
+        uses: "ramsey/composer-install@v2"
+
+      - name: "Run PHPBench"
+        run: "composer phpbench -- --ansi"
+
+
   unit-tests:
     name: "Unit Tests"
     runs-on: ${{ matrix.operating-system }}
