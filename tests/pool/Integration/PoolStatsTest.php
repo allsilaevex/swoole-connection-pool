@@ -21,8 +21,8 @@ use Allsilaevex\Pool\TimerTask\TimerTaskSchedulerInterface;
 use function uniqid;
 
 #[CoversClass(Pool::class)]
+#[CoversClass(PoolMetrics::class)]
 #[UsesClass(PoolConfig::class)]
-#[UsesClass(PoolMetrics::class)]
 #[UsesClass(PoolItemWrapper::class)]
 #[UsesClass(PoolItemWrapperFactory::class)]
 class PoolStatsTest extends TestCase

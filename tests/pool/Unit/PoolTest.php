@@ -115,4 +115,126 @@ class PoolTest extends TestCase
         static::assertNull($unnecessaryItem);
         static::assertEquals(0, $pool->getCurrentSize());
     }
+
+    public function testDecreaseOnEmptyPool(): void
+    {
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+        $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: $poolItemWrapperFactoryMock,
+        );
+
+        static::assertEquals(0, $pool->getCurrentSize());
+        static::assertFalse($pool->decreaseItems());
+        static::assertEquals(0, $pool->getCurrentSize());
+    }
+
+    public function testIncreaseOnFilledPool(): void
+    {
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+        $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: $poolItemWrapperFactoryMock,
+        );
+
+        $pool->increaseItems();
+
+        static::assertEquals(1, $pool->getCurrentSize());
+        static::assertFalse($pool->increaseItems());
+        static::assertEquals(1, $pool->getCurrentSize());
+    }
+
+    public function testIncreaseWithCreationFail(): void
+    {
+        $exception = new \LogicException('testIncreaseWithCreationFail');
+
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+
+        $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
+        $poolItemWrapperFactoryMock->expects(self::once())->method('create')->willThrowException($exception);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: $poolItemWrapperFactoryMock,
+        );
+
+        try {
+            $pool->increaseItems();
+
+            static::fail();
+        } catch (\Throwable $throwable) {
+            static::assertEquals($exception->getMessage(), $throwable->getMessage());
+        }
+
+        static::assertEquals(0, $pool->getCurrentSize());
+    }
+
+    public function testIdledItemStorageGetter(): void
+    {
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+        $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: $poolItemWrapperFactoryMock,
+        );
+
+        $idledItemStorage = $pool->getIdledItemStorage();
+
+        static::assertEquals(0, $idledItemStorage->count());
+
+        $pool->increaseItems();
+
+        static::assertEquals(1, $idledItemStorage->count());
+    }
+
+    public function testBorrowedItemStorageGetter(): void
+    {
+        $factoryMock = $this->createMock(PoolItemFactoryInterface::class);
+        $factoryMock->method('create')->willReturn(new stdClass());
+
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: new PoolItemWrapperFactory(
+                factory: $factoryMock,
+                poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
+            ),
+        );
+
+        $borrowedItemStorage = $pool->getBorrowedItemStorage();
+
+        static::assertEquals(0, $borrowedItemStorage->count());
+
+        $item = $pool->borrow();
+
+        static::assertEquals(1, $borrowedItemStorage->count());
+
+        $pool->return($item);
+    }
 }

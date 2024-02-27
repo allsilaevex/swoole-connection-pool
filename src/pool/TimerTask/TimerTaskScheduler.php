@@ -48,10 +48,15 @@ class TimerTaskScheduler implements TimerTaskSchedulerInterface
      */
     public function bindTo(object $runner): void
     {
+        $timerTaskIdCount = count($this->timerTaskIds);
+
+        if ($timerTaskIdCount > 0) {
+            $this->stop();
+        }
+
         $this->runnerRef = WeakReference::create($runner);
 
-        if (count($this->timerTaskIds) > 0) {
-            $this->stop();
+        if ($timerTaskIdCount > 0) {
             $this->start();
         }
     }

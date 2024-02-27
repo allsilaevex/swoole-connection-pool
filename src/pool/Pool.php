@@ -124,7 +124,7 @@ class Pool implements PoolInterface, PoolControlInterface
         if (!is_null($this->poolItemHookManager)) {
             $this->poolItemHookManager->run(PoolItemHook::BEFORE_BORROW, $poolItemWrapper);
 
-            if ($poolItemWrapper->compareAndSetState(PoolItemState::RESERVED, PoolItemState::IN_USE)) {
+            if (!$poolItemWrapper->compareAndSetState(PoolItemState::RESERVED, PoolItemState::IN_USE)) {
                 throw new LogicException();
             }
         }
@@ -292,9 +292,13 @@ class Pool implements PoolInterface, PoolControlInterface
         $this->metrics->itemCreatedTotal++;
         $this->metrics->itemCreationTotalSec += 1e-9 * (hrtime(true) - $start);
 
+        $this->idledItemStorage->attach($poolItemWrapper, hrtime(true));
+
         $result = $this->concurrentBag->push($poolItemWrapper, .001);
 
         if ($result === false) {
+            $this->idledItemStorage->detach($poolItemWrapper);
+
             $poolItemWrapper->close();
             $poolItemWrapper = null;
 

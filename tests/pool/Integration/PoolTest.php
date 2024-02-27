@@ -11,13 +11,20 @@ use Allsilaevex\Pool\Pool;
 use PHPUnit\Framework\TestCase;
 use Allsilaevex\Pool\PoolConfig;
 use Allsilaevex\Pool\PoolMetrics;
+use Allsilaevex\Pool\PoolItemState;
 use Allsilaevex\Pool\PoolItemWrapper;
+use Allsilaevex\Pool\Hook\PoolItemHook;
 use PHPUnit\Framework\Attributes\UsesClass;
 use Allsilaevex\Pool\PoolItemWrapperFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
+use Allsilaevex\Pool\Hook\PoolItemHookManager;
 use Allsilaevex\Pool\PoolItemFactoryInterface;
+use Allsilaevex\Pool\PoolItemWrapperInterface;
+use Allsilaevex\Pool\Hook\PoolItemHookInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskScheduler;
+use Allsilaevex\Pool\PoolItemWrapperFactoryInterface;
 use Allsilaevex\ConnectionPool\Tasks\ResizerTimerTask;
+use Allsilaevex\Pool\Exceptions\BorrowTimeoutException;
 use Allsilaevex\Pool\TimerTask\TimerTaskSchedulerInterface;
 
 use function mb_strlen;
@@ -28,6 +35,7 @@ use function mb_strlen;
 #[UsesClass(PoolItemWrapper::class)]
 #[UsesClass(ResizerTimerTask::class)]
 #[UsesClass(TimerTaskScheduler::class)]
+#[UsesClass(PoolItemHookManager::class)]
 #[UsesClass(PoolItemWrapperFactory::class)]
 class PoolTest extends TestCase
 {
@@ -302,6 +310,90 @@ class PoolTest extends TestCase
         static::assertEquals(0, $factory->count);
 
         \Swoole\Coroutine::resume($cid);
+    }
+
+    public function testBorrowNaughtyPoolItemWrapper(): void
+    {
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+
+        $poolItemWrapper = $this->createMock(PoolItemWrapperInterface::class);
+        $poolItemWrapper->method('getState')->willReturn(PoolItemState::REMOVED);
+        $poolItemWrapper->expects(self::once())->method('waitForCompareAndSetState')->willReturn(false);
+
+        $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
+        $poolItemWrapperFactoryMock->method('create')->willReturn($poolItemWrapper);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: null,
+            poolItemWrapperFactory: $poolItemWrapperFactoryMock,
+        );
+
+        $this->expectException(BorrowTimeoutException::class);
+
+        $pool->borrow();
+    }
+
+    public function testItemHookManager(): void
+    {
+        $item = new stdClass();
+        $item->counter = 0;
+
+        $factoryMock = $this->createMock(PoolItemFactoryInterface::class);
+        $factoryMock->method('create')->willReturn($item);
+
+        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
+
+        /** @var \Allsilaevex\Pool\Hook\PoolItemHookManagerInterface<object> $manager */
+        $manager = new PoolItemHookManager([
+            $this->createPoolItemHook(PoolItemHook::AFTER_RETURN),
+            $this->createPoolItemHook(PoolItemHook::BEFORE_BORROW),
+        ]);
+
+        $pool = new Pool(
+            name: 'test',
+            config: new PoolConfig(1, .1, .1),
+            logger: new NullLogger(),
+            timerTaskScheduler: $timerTaskSchedulerMock,
+            poolItemHookManager: $manager,
+            poolItemWrapperFactory: new PoolItemWrapperFactory(
+                factory: $factoryMock,
+                poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
+            ),
+        );
+
+        $itemFromPool = $pool->borrow();
+        $pool->return($itemFromPool);
+
+        static::assertEquals(2, $item->counter);
+    }
+
+    /**
+     * @return PoolItemHookInterface<stdClass&object{counter: int}>
+     */
+    protected function createPoolItemHook(PoolItemHook $hook): PoolItemHookInterface
+    {
+        return new /**
+         * @implements PoolItemHookInterface<stdClass&object{counter: int}>
+         */ class($hook) implements PoolItemHookInterface {
+            public function __construct(
+                protected PoolItemHook $hook,
+            ) {
+            }
+
+            public function invoke(PoolItemWrapperInterface $poolItemWrapper): void
+            {
+                $poolItemWrapper->getItem()->counter++;
+            }
+
+            public function getHook(): PoolItemHook
+            {
+                return $this->hook;
+            }
+        };
     }
 
     /**
