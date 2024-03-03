@@ -6,7 +6,6 @@ namespace Allsilaevex\Pool\Test\Integration;
 
 use stdClass;
 use Throwable;
-use Psr\Log\NullLogger;
 use Allsilaevex\Pool\Pool;
 use PHPUnit\Framework\TestCase;
 use Allsilaevex\Pool\PoolConfig;
@@ -193,9 +192,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig($size, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factory,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
@@ -236,9 +232,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(2, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factory,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
@@ -285,9 +278,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1, true, true),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factory,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
@@ -314,8 +304,6 @@ class PoolTest extends TestCase
 
     public function testBorrowNaughtyPoolItemWrapper(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
-
         $poolItemWrapper = $this->createMock(PoolItemWrapperInterface::class);
         $poolItemWrapper->method('getState')->willReturn(PoolItemState::REMOVED);
         $poolItemWrapper->expects(self::once())->method('waitForCompareAndSetState')->willReturn(false);
@@ -326,9 +314,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -356,13 +341,11 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: $manager,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factoryMock,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
             ),
+            poolItemHookManager: $manager,
         );
 
         $itemFromPool = $pool->borrow();
@@ -432,9 +415,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig($size, .1, .1, true, true),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factory ?? $defaultFactory,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,

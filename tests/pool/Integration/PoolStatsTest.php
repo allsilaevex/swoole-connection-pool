@@ -6,7 +6,6 @@ namespace Allsilaevex\Pool\Test\Integration;
 
 use stdClass;
 use Throwable;
-use Psr\Log\NullLogger;
 use Allsilaevex\Pool\Pool;
 use PHPUnit\Framework\TestCase;
 use Allsilaevex\Pool\PoolConfig;
@@ -121,9 +120,6 @@ class PoolStatsTest extends TestCase
         $pool = new Pool(
             name: 'pool_name',
             config: new PoolConfig($size, $borrowingTimeoutSec, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factoryMock,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,

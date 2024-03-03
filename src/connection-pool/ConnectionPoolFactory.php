@@ -261,13 +261,13 @@ class ConnectionPoolFactory
         $pool = new Pool(
             name: $name,
             config: $config,
-            logger: $this->logger,
-            timerTaskScheduler: $timerTaskScheduler,
-            poolItemHookManager: count($this->hooks) > 0 ? new PoolItemHookManager($this->hooks) : null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $this->factory,
                 poolItemTimerTaskScheduler: $poolItemTimerTaskScheduler,
             ),
+            logger: $this->logger,
+            timerTaskScheduler: $timerTaskScheduler,
+            poolItemHookManager: count($this->hooks) > 0 ? new PoolItemHookManager($this->hooks) : null,
         );
 
         return $pool;

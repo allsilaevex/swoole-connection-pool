@@ -9,6 +9,7 @@ use WeakReference;
 use LogicException;
 use SplObjectStorage;
 use Swoole\Coroutine;
+use Psr\Log\NullLogger;
 use Psr\Log\LoggerInterface;
 use Swoole\Coroutine\Channel;
 use Allsilaevex\Pool\Hook\PoolItemHook;
@@ -45,18 +46,18 @@ class Pool implements PoolInterface, PoolControlInterface
     protected int $itemWrapperCount;
 
     /**
-     * @param  non-empty-string                                          $name
-     * @param  TimerTaskSchedulerInterface<PoolControlInterface<TItem>>  $timerTaskScheduler
-     * @param  PoolItemHookManagerInterface<TItem>|null                  $poolItemHookManager
-     * @param  PoolItemWrapperFactoryInterface<TItem>                    $poolItemWrapperFactory
+     * @param  non-empty-string                                               $name
+     * @param  PoolItemWrapperFactoryInterface<TItem>                         $poolItemWrapperFactory
+     * @param  TimerTaskSchedulerInterface<PoolControlInterface<TItem>>|null  $timerTaskScheduler
+     * @param  PoolItemHookManagerInterface<TItem>|null                       $poolItemHookManager
      */
     public function __construct(
         protected string $name,
         protected PoolConfig $config,
-        protected LoggerInterface $logger,
-        protected TimerTaskSchedulerInterface $timerTaskScheduler,
-        protected ?PoolItemHookManagerInterface $poolItemHookManager,
         protected PoolItemWrapperFactoryInterface $poolItemWrapperFactory,
+        protected LoggerInterface $logger = new NullLogger(),
+        protected ?TimerTaskSchedulerInterface $timerTaskScheduler = null,
+        protected ?PoolItemHookManagerInterface $poolItemHookManager = null,
     ) {
         $this->metrics = new PoolMetrics();
         $this->concurrentBag = new Channel($config->size);
@@ -65,15 +66,15 @@ class Pool implements PoolInterface, PoolControlInterface
         $this->borrowedItemStorage = new SplObjectStorage();
         $this->itemToCoroutineBindings = [];
 
-        $this->timerTaskScheduler->bindTo($this);
-        $this->timerTaskScheduler->run();
+        $this->timerTaskScheduler?->bindTo($this);
+        $this->timerTaskScheduler?->run();
 
-        $this->timerTaskScheduler->start();
+        $this->timerTaskScheduler?->start();
     }
 
     public function __destruct()
     {
-        $this->timerTaskScheduler->stop();
+        $this->timerTaskScheduler?->stop();
 
         // @phpstan-ignore-next-line
         $this->idledItemStorage->removeAll($this->idledItemStorage);

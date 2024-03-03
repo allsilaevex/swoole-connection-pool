@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Allsilaevex\Benchmark;
 
 use stdClass;
-use Psr\Log\NullLogger;
 use Allsilaevex\Pool\Pool;
 use Allsilaevex\Pool\PoolConfig;
 use PhpBench\Attributes as Bench;
-use Allsilaevex\Pool\PoolControlInterface;
 use Allsilaevex\Pool\PoolItemWrapperFactory;
 use Allsilaevex\Pool\PoolItemFactoryInterface;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
@@ -92,9 +90,6 @@ class PoolBench
      */
     protected function createPool(int $size, float $itemCreationTimeout): Pool
     {
-        /** @var TimerTaskSchedulerInterface<PoolControlInterface<stdClass>> $timerTaskScheduler */
-        $timerTaskScheduler = new TimerTaskScheduler([]);
-
         /** @var TimerTaskSchedulerInterface<PoolItemWrapperInterface<stdClass>> $poolItemTimerTaskScheduler */
         $poolItemTimerTaskScheduler = new TimerTaskScheduler([]);
 
@@ -107,9 +102,6 @@ class PoolBench
                 autoReturn: false,
                 bindToCoroutine: false,
             ),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskScheduler,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $this->createFactory($itemCreationTimeout),
                 poolItemTimerTaskScheduler: $poolItemTimerTaskScheduler,

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Allsilaevex\Pool\Test\Unit;
 
 use stdClass;
-use Psr\Log\NullLogger;
 use Allsilaevex\Pool\Pool;
 use PHPUnit\Framework\TestCase;
 use Allsilaevex\Pool\PoolConfig;
@@ -27,15 +26,11 @@ class PoolTest extends TestCase
 {
     public function testGetName(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
 
         $pool = new Pool(
             name: 'pool_name',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -44,15 +39,11 @@ class PoolTest extends TestCase
 
     public function testGetConfig(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
 
         $pool = new Pool(
             name: 'pool_name',
             config: new PoolConfig(1, .2, .3),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -71,9 +62,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'pool_name',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factoryMock,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
@@ -99,9 +87,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factoryMock,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
@@ -118,15 +103,11 @@ class PoolTest extends TestCase
 
     public function testDecreaseOnEmptyPool(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
 
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -137,15 +118,11 @@ class PoolTest extends TestCase
 
     public function testIncreaseOnFilledPool(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
 
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -160,17 +137,12 @@ class PoolTest extends TestCase
     {
         $exception = new \LogicException('testIncreaseWithCreationFail');
 
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
-
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
         $poolItemWrapperFactoryMock->expects(self::once())->method('create')->willThrowException($exception);
 
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -187,15 +159,11 @@ class PoolTest extends TestCase
 
     public function testIdledItemStorageGetter(): void
     {
-        $timerTaskSchedulerMock = $this->createMock(TimerTaskSchedulerInterface::class);
         $poolItemWrapperFactoryMock = $this->createMock(PoolItemWrapperFactoryInterface::class);
 
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: $poolItemWrapperFactoryMock,
         );
 
@@ -218,9 +186,6 @@ class PoolTest extends TestCase
         $pool = new Pool(
             name: 'test',
             config: new PoolConfig(1, .1, .1),
-            logger: new NullLogger(),
-            timerTaskScheduler: $timerTaskSchedulerMock,
-            poolItemHookManager: null,
             poolItemWrapperFactory: new PoolItemWrapperFactory(
                 factory: $factoryMock,
                 poolItemTimerTaskScheduler: $timerTaskSchedulerMock,
