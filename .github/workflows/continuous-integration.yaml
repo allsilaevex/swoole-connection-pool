@@ -86,9 +86,37 @@ jobs:
       - name: "Run PHPBench"
         run: "composer phpbench -- --ansi"
 
+  code-coverage:
+    name: "Code coverage"
+    needs: ["coding-standards", "static-analysis"]
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"
+
+      - name: "Install PHP"
+        uses: "shivammathur/setup-php@v2"
+        with:
+          php-version: "latest"
+          extensions: "swoole-5.1"
+          ini-values: "memory_limit=-1"
+          coverage: "pcov"
+
+      - name: "Install dependencies (Composer)"
+        uses: "ramsey/composer-install@v2"
+
+      - name: "Run unit tests (PHPUnit)"
+        run: "php bin/co-phpunit --verbose --colors=always --coverage-text --coverage-clover build/logs/clover.xml"
+
+      - name: "Publish coverage report to Codecov"
+        uses: "codecov/codecov-action@v4.1.0"
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   unit-tests:
     name: "Unit Tests"
+    needs: ["code-coverage"]
     runs-on: ${{ matrix.operating-system }}
     strategy:
       fail-fast: false
