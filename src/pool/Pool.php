@@ -113,7 +113,11 @@ class Pool implements PoolInterface, PoolControlInterface
                 'item_old_state' => $poolItemWrapper->getState()->name,
                 'item_new_state' => $stateForUpdate->name,
             ];
-            $errorMessage = sprintf('Can\'t set %s state', $stateForUpdate->name);
+            $errorMessage = sprintf(
+                'Can\'t set %s state (old state %s)',
+                $stateForUpdate->name,
+                $poolItemWrapper->getState()->name,
+            );
 
             $this->logger->warning($errorMessage, $context);
 

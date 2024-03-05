@@ -116,15 +116,44 @@ class PoolItemWrapper implements PoolItemWrapperInterface
 
     public function setState(PoolItemState $state): void
     {
-        if ($this->stateStatuses[$this->state->value]->pop(self::CHANNEL_TIMEOUT_SEC) === false) {
-            throw new LogicException();
+        $currentState = $this->state;
+        $statusesSnapshot = $this->takeStatusesSnapshot();
+
+        if ($this->stateStatuses[$currentState->value]->pop(self::CHANNEL_TIMEOUT_SEC) === false) {
+            $debug = [
+                'before pop' => [
+                    'current state' => $currentState->value,
+                    'new state' => $state->value,
+                    'statuses' => $statusesSnapshot,
+                ],
+                'after pop' => [
+                    'current state' => $this->state->value,
+                    'new state' => $state->value,
+                    'statuses' => $this->takeStatusesSnapshot(),
+                ],
+            ];
+
+            throw new LogicException('debug info = ' . \json_encode($debug));
         }
 
         $this->state = $state;
         $this->stateUpdatedAt = hrtime(true);
 
+        $statusesSnapshot = $this->takeStatusesSnapshot();
+
         if (!$this->stateStatuses[$state->value]->push(true, self::CHANNEL_TIMEOUT_SEC)) {
-            throw new LogicException();
+            $debug = [
+                'before push' => [
+                    'current state' => $state->value,
+                    'statuses' => $statusesSnapshot,
+                ],
+                'after push' => [
+                    'current state' => $this->state->value,
+                    'statuses' => $this->takeStatusesSnapshot(),
+                ],
+            ];
+
+            throw new LogicException('debug info = ' . \json_encode($debug));
         }
     }
 
@@ -149,8 +178,21 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         $this->state = $update;
         $this->stateUpdatedAt = hrtime(true);
 
+        $statusesSnapshot = $this->takeStatusesSnapshot();
+
         if (!$this->stateStatuses[$update->value]->push(true, self::CHANNEL_TIMEOUT_SEC)) {
-            throw new LogicException();
+            $debug = [
+                'before push' => [
+                    'current state' => $update->value,
+                    'statuses' => $statusesSnapshot,
+                ],
+                'after push' => [
+                    'current state' => $this->state->value,
+                    'statuses' => $this->takeStatusesSnapshot(),
+                ],
+            ];
+
+            throw new LogicException('debug info = ' . \json_encode($debug));
         }
 
         return true;
@@ -179,5 +221,13 @@ class PoolItemWrapper implements PoolItemWrapperInterface
             'item_lifetime_sec' => (hrtime(true) - $this->itemCreatedAt) * 1e-9,
             'current_state_duration_sec' => (hrtime(true) - $this->stateUpdatedAt) * 1e-9,
         ];
+    }
+
+    /**
+     * @return array<value-of<PoolItemState>, array<mixed>>
+     */
+    protected function takeStatusesSnapshot(): array
+    {
+        return array_map(static fn (Channel $status) => $status->stats(), $this->stateStatuses);
     }
 }
