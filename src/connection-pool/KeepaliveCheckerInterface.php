@@ -10,7 +10,7 @@ namespace Allsilaevex\ConnectionPool;
 interface KeepaliveCheckerInterface
 {
     /**
-     * @param  TConnection  $connection
+     * @param  TConnection|null  $connection
      */
     public function check(mixed $connection): bool;
 

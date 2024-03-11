@@ -36,6 +36,7 @@ class ResizerTimerTask implements TimerTaskInterface
      */
     public function run(int $timerId, mixed $runnerRef): void
     {
+        /** @var PoolControlInterface<TItem>|null $runner */
         $runner = $runnerRef->get();
 
         if (is_null($runner)) {

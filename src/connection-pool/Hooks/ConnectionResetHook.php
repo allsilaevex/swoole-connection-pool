@@ -8,6 +8,8 @@ use Allsilaevex\Pool\Hook\PoolItemHook;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
 use Allsilaevex\Pool\Hook\PoolItemHookInterface;
 
+use function is_null;
+
 /**
  * @template TItem of object
  * @implements PoolItemHookInterface<TItem>
@@ -27,9 +29,12 @@ readonly class ConnectionResetHook implements PoolItemHookInterface
      */
     public function invoke(PoolItemWrapperInterface $poolItemWrapper): void
     {
+        $item = $poolItemWrapper->getItem();
         $resetter = $this->resetter;
 
-        $resetter($poolItemWrapper->getItem());
+        if (!is_null($item)) {
+            $resetter($item);
+        }
     }
 
     public function getHook(): PoolItemHook

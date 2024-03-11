@@ -26,6 +26,7 @@ use Allsilaevex\ConnectionPool\Tasks\ResizerTimerTask;
 use Allsilaevex\Pool\Exceptions\BorrowTimeoutException;
 use Allsilaevex\Pool\TimerTask\TimerTaskSchedulerInterface;
 
+use function is_null;
 use function mb_strlen;
 
 #[CoversClass(Pool::class)]
@@ -369,7 +370,13 @@ class PoolTest extends TestCase
 
             public function invoke(PoolItemWrapperInterface $poolItemWrapper): void
             {
-                $poolItemWrapper->getItem()->counter++;
+                $item = $poolItemWrapper->getItem();
+
+                if (is_null($item)) {
+                    return;
+                }
+
+                $item->counter++;
             }
 
             public function getHook(): PoolItemHook

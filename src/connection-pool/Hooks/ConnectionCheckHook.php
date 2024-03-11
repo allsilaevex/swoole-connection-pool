@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Allsilaevex\ConnectionPool\Hooks;
 
+use Psr\Log\LoggerInterface;
 use Allsilaevex\Pool\Hook\PoolItemHook;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
 use Allsilaevex\Pool\Hook\PoolItemHookInterface;
+use Allsilaevex\Pool\Exceptions\PoolItemCreationException;
 
 /**
  * @template TItem of object
@@ -19,6 +21,7 @@ readonly class ConnectionCheckHook implements PoolItemHookInterface
      */
     public function __construct(
         protected mixed $checker,
+        protected LoggerInterface $logger,
     ) {
     }
 
@@ -30,11 +33,15 @@ readonly class ConnectionCheckHook implements PoolItemHookInterface
         $item = $poolItemWrapper->getItem();
         $checker = $this->checker;
 
-        if ($checker($item)) {
+        if (is_null($item) || $checker($item)) {
             return;
         }
 
-        $poolItemWrapper->recreateItem();
+        try {
+            $poolItemWrapper->recreateItem();
+        } catch (PoolItemCreationException $exception) {
+            $this->logger->error('Can\'t recreate item: ' . $exception->getMessage(), ['item_id' => $poolItemWrapper->getId()]);
+        }
     }
 
     public function getHook(): PoolItemHook

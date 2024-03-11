@@ -15,7 +15,6 @@ use Allsilaevex\Pool\PoolItemWrapperFactory;
 use Allsilaevex\Pool\Hook\PoolItemHookManager;
 use Allsilaevex\Pool\PoolItemFactoryInterface;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
-use Allsilaevex\Pool\Hook\PoolItemHookInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskScheduler;
 use Allsilaevex\ConnectionPool\Tasks\ResizerTimerTask;
@@ -27,6 +26,7 @@ use Allsilaevex\ConnectionPool\Tasks\PoolItemUpdaterTimerTask;
 use function count;
 use function substr;
 use function uniqid;
+use function array_map;
 
 /**
  * @template TConnection of object
@@ -43,13 +43,13 @@ class ConnectionPoolFactory
     protected float $leakDetectionThresholdSec;
     protected float $maxItemReservingForUpdateWaitingTimeSec;
 
-    /** @var list<PoolItemHookInterface<TConnection>> */
-    protected array $hooks;
+    /** @var list<callable(TConnection): bool> */
+    protected array $checkers;
 
     protected LoggerInterface $logger;
 
-    /** @var list<TimerTaskInterface<PoolItemWrapperInterface<TConnection>>> */
-    protected array $poolItemTimerTasks;
+    /** @var list<KeepaliveCheckerInterface<TConnection>> */
+    protected array $keepaliveCheckers;
 
     /**
      * @param  positive-int                           $size
@@ -59,9 +59,9 @@ class ConnectionPoolFactory
         protected int $size,
         protected PoolItemFactoryInterface $factory,
     ) {
-        $this->hooks = [];
+        $this->checkers = [];
         $this->logger = new NullLogger();
-        $this->poolItemTimerTasks = [];
+        $this->keepaliveCheckers = [];
 
         $this->minimumIdle = $this->size;
         $this->autoReturn = true;
@@ -200,7 +200,7 @@ class ConnectionPoolFactory
      */
     public function setConnectionChecker(callable $checker): self
     {
-        $this->hooks[] = new ConnectionCheckHook($checker);
+        $this->checkers[] = $checker;
 
         return $this;
     }
@@ -212,8 +212,7 @@ class ConnectionPoolFactory
      */
     public function setKeepaliveChecker(KeepaliveCheckerInterface $keepaliveChecker): self
     {
-        /** @psalm-suppress InvalidPropertyAssignmentValue */
-        $this->poolItemTimerTasks[] = new KeepaliveCheckTimerTask($keepaliveChecker);
+        $this->keepaliveCheckers[] = $keepaliveChecker;
 
         return $this;
     }
@@ -245,14 +244,22 @@ class ConnectionPoolFactory
         $poolItemUpdaterTimerTask = new PoolItemUpdaterTimerTask(
             intervalSec: $this->maxLifetimeSec / 10,
             maxLifetimeSec: $this->maxLifetimeSec,
+            logger: $this->logger,
             maxItemReservingWaitingTimeSec: $this->maxItemReservingForUpdateWaitingTimeSec,
+        );
+
+        $poolItemTimerTasks = array_map(
+            fn (KeepaliveCheckerInterface $checker) => new KeepaliveCheckTimerTask($this->logger, $checker),
+            $this->keepaliveCheckers,
         );
 
         /** @var TimerTaskScheduler<PoolItemWrapperInterface<TConnection>> $poolItemTimerTaskScheduler */
         $poolItemTimerTaskScheduler = new TimerTaskScheduler([
             $poolItemUpdaterTimerTask,
-            ...$this->poolItemTimerTasks,
+            ...$poolItemTimerTasks,
         ]);
+
+        $hooks = array_map(fn (callable $checker) => new ConnectionCheckHook($checker, $this->logger), $this->checkers);
 
         /**
          * @var Pool<TConnection> $pool
@@ -267,7 +274,7 @@ class ConnectionPoolFactory
             ),
             logger: $this->logger,
             timerTaskScheduler: $timerTaskScheduler,
-            poolItemHookManager: count($this->hooks) > 0 ? new PoolItemHookManager($this->hooks) : null,
+            poolItemHookManager: count($hooks) > 0 ? new PoolItemHookManager($hooks) : null,
         );
 
         return $pool;

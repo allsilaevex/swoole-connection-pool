@@ -22,6 +22,9 @@ interface PoolControlInterface
 
     public function getCurrentSize(): int;
 
+    /**
+     * @throws \Throwable
+     */
     public function increaseItems(): bool;
 
     public function decreaseItems(): bool;

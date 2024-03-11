@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Allsilaevex\ConnectionPool\Tasks;
 
-use LogicException;
+use Psr\Log\LoggerInterface;
 use Allsilaevex\Pool\PoolItemState;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskInterface;
 use Allsilaevex\ConnectionPool\KeepaliveCheckerInterface;
-use Allsilaevex\Pool\Exceptions\PoolItemRemovedException;
+use Allsilaevex\Pool\Exceptions\PoolItemCreationException;
 
 use function is_null;
 
@@ -23,6 +23,7 @@ readonly class KeepaliveCheckTimerTask implements TimerTaskInterface
      * @param  KeepaliveCheckerInterface<TItem>  $keepaliveChecker
      */
     public function __construct(
+        protected LoggerInterface $logger,
         protected KeepaliveCheckerInterface $keepaliveChecker,
     ) {
     }
@@ -43,14 +44,14 @@ readonly class KeepaliveCheckTimerTask implements TimerTaskInterface
             return;
         }
 
-        try {
-            $isAlive = $this->keepaliveChecker->check($runner->getItem());
-        } catch (PoolItemRemovedException) {
-            throw new LogicException();
-        }
+        $isAlive = $this->keepaliveChecker->check($runner->getItem());
 
         if (!$isAlive) {
-            $runner->recreateItem();
+            try {
+                $runner->recreateItem();
+            } catch (PoolItemCreationException $exception) {
+                $this->logger->error('Can\'t recreate item: ' . $exception->getMessage(), ['item_id' => $runner->getId()]);
+            }
         }
 
         $runner->setState(PoolItemState::IDLE);

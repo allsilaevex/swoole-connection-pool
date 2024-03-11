@@ -10,7 +10,6 @@ use Allsilaevex\Pool\TimerTask\TimerTaskSchedulerInterface;
 
 use function hrtime;
 use function uniqid;
-use function is_null;
 
 /**
  * @template TItem of object
@@ -47,12 +46,12 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         protected PoolItemFactoryInterface $factory,
         protected TimerTaskSchedulerInterface $timerTaskScheduler,
     ) {
-        $this->recreateItem();
-
         $this->id = uniqid('pool_item_', more_entropy: true);
         $this->state = PoolItemState::IDLE;
         $this->stateStatuses = [];
         $this->stateUpdatedAt = hrtime(true);
+
+        $this->recreateItem();
 
         foreach (PoolItemState::cases() as $case) {
             $this->stateStatuses[$case->value] = new Channel();
@@ -88,20 +87,21 @@ class PoolItemWrapper implements PoolItemWrapperInterface
      */
     public function getItem(): mixed
     {
-        if ($this->state == PoolItemState::REMOVED || is_null($this->item)) {
-            throw new Exceptions\PoolItemRemovedException('Getting item not allowed (item already removed)');
-        }
+        $this->selfCheck();
 
         return $this->item;
     }
 
     /**
-     * @throws Exceptions\PoolItemCreationException
+     * @inheritDoc
      */
     public function recreateItem(): void
     {
+        $this->selfCheck();
+
         // destruct first
         $this->item = null;
+        $this->itemCreatedAt = .0;
 
         /** @psalm-suppress InvalidPropertyAssignmentValue */
         $this->item = $this->factory->create();
@@ -114,8 +114,17 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         return $this->state;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function setState(PoolItemState $state): void
     {
+        if ($state == PoolItemState::REMOVED) {
+            throw new LogicException('Can\'t directly set REMOVED state (use close() method)');
+        }
+
+        $this->selfCheck();
+
         $currentState = $this->state;
         $statusesSnapshot = $this->takeStatusesSnapshot();
 
@@ -157,6 +166,9 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         }
     }
 
+    /**
+     * @inheritDoc
+     */
     public function compareAndSetState(PoolItemState $expect, PoolItemState $update): bool
     {
         if ($this->state == $expect) {
@@ -167,8 +179,17 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         return false;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function waitForCompareAndSetState(PoolItemState $expect, PoolItemState $update, float $timeoutSec): bool
     {
+        if ($update == PoolItemState::REMOVED) {
+            throw new LogicException('Can\'t directly set REMOVED state (use close() method)');
+        }
+
+        $this->selfCheck();
+
         $result = $this->stateStatuses[$expect->value]->pop($timeoutSec);
 
         if ($result === false) {
@@ -200,7 +221,12 @@ class PoolItemWrapper implements PoolItemWrapperInterface
 
     public function close(): void
     {
-        $this->setState(PoolItemState::REMOVED);
+        if ($this->state == PoolItemState::REMOVED) {
+            return;
+        }
+
+        $this->state = PoolItemState::REMOVED;
+        $this->stateUpdatedAt = hrtime(true);
 
         $this->timerTaskScheduler->stop();
 
@@ -221,6 +247,16 @@ class PoolItemWrapper implements PoolItemWrapperInterface
             'item_lifetime_sec' => (hrtime(true) - $this->itemCreatedAt) * 1e-9,
             'current_state_duration_sec' => (hrtime(true) - $this->stateUpdatedAt) * 1e-9,
         ];
+    }
+
+    /**
+     * @throws Exceptions\PoolItemRemovedException
+     */
+    protected function selfCheck(): void
+    {
+        if ($this->state == PoolItemState::REMOVED) {
+            throw new Exceptions\PoolItemRemovedException();
+        }
     }
 
     /**

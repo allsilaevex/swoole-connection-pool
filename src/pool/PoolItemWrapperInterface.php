@@ -15,19 +15,32 @@ interface PoolItemWrapperInterface
     public function getId(): string;
 
     /**
-     * @return TItem
-     * @throws \Allsilaevex\Pool\Exceptions\PoolItemRemovedException
+     * @return TItem|null
+     * @throws Exceptions\PoolItemRemovedException
      */
     public function getItem(): mixed;
 
+    /**
+     * @throws Exceptions\PoolItemCreationException
+     * @throws Exceptions\PoolItemRemovedException
+     */
     public function recreateItem(): void;
 
     public function getState(): PoolItemState;
 
+    /**
+     * @throws Exceptions\PoolItemRemovedException
+     */
     public function setState(PoolItemState $state): void;
 
+    /**
+     * @throws Exceptions\PoolItemRemovedException
+     */
     public function compareAndSetState(PoolItemState $expect, PoolItemState $update): bool;
 
+    /**
+     * @throws Exceptions\PoolItemRemovedException
+     */
     public function waitForCompareAndSetState(PoolItemState $expect, PoolItemState $update, float $timeoutSec): bool;
 
     public function close(): void;

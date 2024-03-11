@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Allsilaevex\ConnectionPool\Tasks;
 
+use Psr\Log\LoggerInterface;
 use Allsilaevex\Pool\PoolItemState;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskInterface;
+use Allsilaevex\Pool\Exceptions\PoolItemCreationException;
 
 use function is_null;
 
@@ -19,6 +21,7 @@ readonly class PoolItemUpdaterTimerTask implements TimerTaskInterface
     public function __construct(
         public float $intervalSec,
         public float $maxLifetimeSec,
+        public LoggerInterface $logger,
         public float $maxItemReservingWaitingTimeSec = .0,
     ) {
     }
@@ -53,7 +56,11 @@ readonly class PoolItemUpdaterTimerTask implements TimerTaskInterface
         }
 
         if ($runner->stats()['item_lifetime_sec'] > $this->maxLifetimeSec) {
-            $runner->recreateItem();
+            try {
+                $runner->recreateItem();
+            } catch (PoolItemCreationException $exception) {
+                $this->logger->error('Can\'t recreate item: ' . $exception->getMessage(), ['item_id' => $runner->getId()]);
+            }
         }
 
         $runner->setState(PoolItemState::IDLE);

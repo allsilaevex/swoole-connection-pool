@@ -7,6 +7,7 @@ namespace Allsilaevex\Pool;
 use Throwable;
 use WeakReference;
 use LogicException;
+use ReflectionClass;
 use SplObjectStorage;
 use Swoole\Coroutine;
 use Psr\Log\NullLogger;
@@ -97,44 +98,24 @@ class Pool implements PoolInterface, PoolControlInterface
         }
 
         $start = hrtime(true);
-        $poolItemWrapper = $this->getPoolItemWrapper();
-        $timeLeft = max(.0001, $this->config->borrowingTimeoutSec - (hrtime(true) - $start) * 1e-9);
 
-        if (is_null($this->poolItemHookManager)) {
-            $stateForUpdate = PoolItemState::IN_USE;
-        } else {
-            $stateForUpdate = PoolItemState::RESERVED;
-        }
+        $poolItemWrapper = $this->getReservedPoolItemWrapperWithExistingItem(
+            timeLeftSec: $this->config->borrowingTimeoutSec,
+            increaseItemsOnEmptyPool: true,
+        );
 
-        if (!$poolItemWrapper->waitForCompareAndSetState(PoolItemState::IDLE, $stateForUpdate, $timeLeft)) {
-            $context = [
-                'pool_name' => $this->getName(),
-                'item_id' => $poolItemWrapper->getId(),
-                'item_old_state' => $poolItemWrapper->getState()->name,
-                'item_new_state' => $stateForUpdate->name,
-            ];
-            $errorMessage = sprintf(
-                'Can\'t set %s state (old state %s)',
-                $stateForUpdate->name,
-                $poolItemWrapper->getState()->name,
-            );
+        $this->poolItemHookManager?->run(PoolItemHook::BEFORE_BORROW, $poolItemWrapper);
 
-            $this->logger->warning($errorMessage, $context);
-
-            $this->metrics->borrowingTimeoutsTotal++;
-
-            throw new Exceptions\BorrowTimeoutException($errorMessage);
-        }
-
-        if (!is_null($this->poolItemHookManager)) {
-            $this->poolItemHookManager->run(PoolItemHook::BEFORE_BORROW, $poolItemWrapper);
-
-            if (!$poolItemWrapper->compareAndSetState(PoolItemState::RESERVED, PoolItemState::IN_USE)) {
-                throw new LogicException();
-            }
+        if (!$poolItemWrapper->compareAndSetState(PoolItemState::RESERVED, PoolItemState::IN_USE)) {
+            throw new LogicException();
         }
 
         $item = $poolItemWrapper->getItem();
+
+        // todo: in this case it's probably better to try getting a new pool item wrapper
+        if (is_null($item)) {
+            throw new Exceptions\BorrowTimeoutException('Can\'t get item after hooks');
+        }
 
         $this->idledItemStorage->detach($poolItemWrapper);
         $this->borrowedItemStorage->attach($item, $poolItemWrapper);
@@ -277,6 +258,9 @@ class Pool implements PoolInterface, PoolControlInterface
         return $this->config;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function increaseItems(): bool
     {
         if ($this->concurrentBag->isFull()) {
@@ -302,13 +286,7 @@ class Pool implements PoolInterface, PoolControlInterface
         $result = $this->concurrentBag->push($poolItemWrapper, .001);
 
         if ($result === false) {
-            $this->idledItemStorage->detach($poolItemWrapper);
-
-            $poolItemWrapper->close();
-            $poolItemWrapper = null;
-
-            $this->itemWrapperCount--;
-            $this->metrics->itemDeletedTotal++;
+            $this->removePoolItemWrapper($poolItemWrapper);
         }
 
         return $result;
@@ -327,36 +305,114 @@ class Pool implements PoolInterface, PoolControlInterface
             return false;
         }
 
+        $this->removePoolItemWrapper($poolItemWrapper);
+
+        return true;
+    }
+
+    /**
+     * @param  PoolItemWrapperInterface<TItem>  $poolItemWrapper
+     */
+    protected function removePoolItemWrapper(PoolItemWrapperInterface $poolItemWrapper): void
+    {
         $this->idledItemStorage->detach($poolItemWrapper);
 
         $poolItemWrapper->close();
-        $poolItemWrapper = null;
 
         $this->itemWrapperCount--;
         $this->metrics->itemDeletedTotal++;
-
-        return true;
     }
 
     /**
      * @return PoolItemWrapperInterface<TItem>
      * @throws Exceptions\BorrowTimeoutException
      */
-    protected function getPoolItemWrapper(): PoolItemWrapperInterface
+    protected function getPoolItemWrapper(float $timeLeftSec, bool $increaseItemsOnEmptyPool): PoolItemWrapperInterface
     {
-        if ($this->concurrentBag->isEmpty() && $this->getCurrentSize() < $this->config->size) {
+        $isPoolEmpty = $this->concurrentBag->isEmpty() && $this->getCurrentSize() < $this->config->size;
+
+        if ($increaseItemsOnEmptyPool && $isPoolEmpty) {
             \Swoole\Coroutine\go(function () {
-                $this->increaseItems();
+                try {
+                    $this->increaseItems();
+                } catch (Throwable $exception) {
+                    $errorMessage = sprintf(
+                        'Can\'t create new item for empty pool (%s): %s',
+                        (new ReflectionClass($exception))->getShortName(),
+                        $exception->getMessage(),
+                    );
+
+                    $this->logger->error($errorMessage, ['pool_name' => $this->getName()]);
+                }
             });
         }
 
         /** @var PoolItemWrapperInterface<TItem>|false $poolItemWrapper */
-        $poolItemWrapper = $this->concurrentBag->pop($this->config->borrowingTimeoutSec);
+        $poolItemWrapper = $this->concurrentBag->pop($timeLeftSec);
 
         if ($poolItemWrapper === false) {
             $this->metrics->borrowingTimeoutsTotal++;
 
             throw new Exceptions\BorrowTimeoutException('Can\'t pop item from concurrentBag');
+        }
+
+        return $poolItemWrapper;
+    }
+
+    /**
+     * @return PoolItemWrapperInterface<TItem>
+     * @throws Exceptions\BorrowTimeoutException
+     */
+    protected function getReservedPoolItemWrapper(float $timeoutSec, bool $increaseItemsOnEmptyPool): PoolItemWrapperInterface
+    {
+        $start = hrtime(true);
+        $poolItemWrapper = $this->getPoolItemWrapper($timeoutSec, $increaseItemsOnEmptyPool);
+        $timeoutSec = max(.0001, $timeoutSec - (hrtime(true) - $start) * 1e-9);
+
+        if (!$poolItemWrapper->waitForCompareAndSetState(PoolItemState::IDLE, PoolItemState::RESERVED, $timeoutSec)) {
+            $context = [
+                'pool_name' => $this->getName(),
+                'item_id' => $poolItemWrapper->getId(),
+                'item_old_state' => $poolItemWrapper->getState()->name,
+                'item_new_state' => PoolItemState::RESERVED->name,
+            ];
+            $errorMessage = sprintf(
+                'Can\'t set %s state (old state %s)',
+                PoolItemState::RESERVED->name,
+                $poolItemWrapper->getState()->name,
+            );
+
+            $this->logger->error($errorMessage, $context);
+
+            $this->metrics->borrowingTimeoutsTotal++;
+
+            $result = $this->concurrentBag->push($poolItemWrapper, .001);
+
+            if ($result === false) {
+                $this->removePoolItemWrapper($poolItemWrapper);
+            }
+
+            throw new Exceptions\BorrowTimeoutException($errorMessage);
+        }
+
+        return $poolItemWrapper;
+    }
+
+    /**
+     * @return PoolItemWrapperInterface<TItem>
+     * @throws Exceptions\BorrowTimeoutException
+     */
+    protected function getReservedPoolItemWrapperWithExistingItem(float $timeLeftSec, bool $increaseItemsOnEmptyPool): PoolItemWrapperInterface
+    {
+        $start = hrtime(true);
+        $poolItemWrapper = $this->getReservedPoolItemWrapper($timeLeftSec, $increaseItemsOnEmptyPool);
+
+        if (is_null($poolItemWrapper->getItem())) {
+            $this->removePoolItemWrapper($poolItemWrapper);
+
+            $recalculatedTimeLeftSec = max(.0001, $timeLeftSec - (hrtime(true) - $start) * 1e-9);
+
+            return $this->getReservedPoolItemWrapperWithExistingItem($recalculatedTimeLeftSec, increaseItemsOnEmptyPool: false);
         }
 
         return $poolItemWrapper;
