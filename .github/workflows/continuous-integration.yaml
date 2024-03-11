@@ -27,7 +27,7 @@ jobs:
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
-        uses: "ramsey/composer-install@v2"
+        uses: "ramsey/composer-install@v3"
         with:
           composer-options: "--ignore-platform-req=ext-swoole"
 
@@ -48,7 +48,7 @@ jobs:
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
-        uses: "ramsey/composer-install@v2"
+        uses: "ramsey/composer-install@v3"
         with:
           composer-options: "--ignore-platform-req=ext-swoole"
 
@@ -81,7 +81,7 @@ jobs:
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
-        uses: "ramsey/composer-install@v2"
+        uses: "ramsey/composer-install@v3"
 
       - name: "Run PHPBench"
         run: "composer phpbench -- --ansi"
@@ -103,7 +103,7 @@ jobs:
           coverage: "pcov"
 
       - name: "Install dependencies (Composer)"
-        uses: "ramsey/composer-install@v2"
+        uses: "ramsey/composer-install@v3"
 
       - name: "Run unit tests (PHPUnit)"
         run: "php bin/co-phpunit --colors=always --coverage-text --coverage-clover build/logs/clover.xml"
@@ -139,7 +139,7 @@ jobs:
           coverage: "none"
 
       - name: "Install dependencies (Composer)"
-        uses: "ramsey/composer-install@v2"
+        uses: "ramsey/composer-install@v3"
 
       - name: "Run unit tests (PHPUnit)"
         run: "composer phpunit"
