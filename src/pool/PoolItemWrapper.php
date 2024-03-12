@@ -51,13 +51,13 @@ class PoolItemWrapper implements PoolItemWrapperInterface
         $this->stateStatuses = [];
         $this->stateUpdatedAt = hrtime(true);
 
-        $this->recreateItem();
-
         foreach (PoolItemState::cases() as $case) {
             $this->stateStatuses[$case->value] = new Channel();
         }
 
         $this->stateStatuses[PoolItemState::IDLE->value]->push(true, self::CHANNEL_TIMEOUT_SEC);
+
+        $this->recreateItem();
 
         $this->timerTaskScheduler->bindTo($this);
         $this->timerTaskScheduler->run();

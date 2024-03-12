@@ -9,6 +9,7 @@ use Allsilaevex\Pool\PoolItemState;
 use Allsilaevex\Pool\PoolItemWrapperInterface;
 use Allsilaevex\Pool\TimerTask\TimerTaskInterface;
 use Allsilaevex\ConnectionPool\KeepaliveCheckerInterface;
+use Allsilaevex\Pool\Exceptions\PoolItemRemovedException;
 use Allsilaevex\Pool\Exceptions\PoolItemCreationException;
 
 use function is_null;
@@ -45,16 +46,21 @@ readonly class KeepaliveCheckTimerTask implements TimerTaskInterface
         }
 
         $isAlive = $this->keepaliveChecker->check($runner->getItem());
+        $logContext = ['item_id' => $runner->getId()];
 
         if (!$isAlive) {
             try {
                 $runner->recreateItem();
             } catch (PoolItemCreationException $exception) {
-                $this->logger->error('Can\'t recreate item: ' . $exception->getMessage(), ['item_id' => $runner->getId()]);
+                $this->logger->error('Can\'t recreate item: ' . $exception->getMessage(), $logContext);
             }
         }
 
-        $runner->setState(PoolItemState::IDLE);
+        try {
+            $runner->setState(PoolItemState::IDLE);
+        } catch (PoolItemRemovedException) {
+            $this->logger->info('Can\'t set IDLE state (item already removed)', $logContext);
+        }
     }
 
     public function getIntervalSec(): float
