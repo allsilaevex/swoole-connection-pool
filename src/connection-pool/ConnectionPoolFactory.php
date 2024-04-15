@@ -198,7 +198,7 @@ class ConnectionPoolFactory
      *
      * @return self<TConnection>
      */
-    public function setConnectionChecker(callable $checker): self
+    public function addConnectionChecker(callable $checker): self
     {
         $this->checkers[] = $checker;
 
@@ -210,7 +210,7 @@ class ConnectionPoolFactory
      *
      * @return self<TConnection>
      */
-    public function setKeepaliveChecker(KeepaliveCheckerInterface $keepaliveChecker): self
+    public function addKeepaliveChecker(KeepaliveCheckerInterface $keepaliveChecker): self
     {
         $this->keepaliveCheckers[] = $keepaliveChecker;
 
