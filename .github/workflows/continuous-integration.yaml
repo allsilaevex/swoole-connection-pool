@@ -109,7 +109,7 @@ jobs:
         run: "php bin/co-phpunit --colors=always --coverage-text --coverage-clover build/logs/clover.xml"
 
       - name: "Publish coverage report to Codecov"
-        uses: "codecov/codecov-action@v4.1.0"
+        uses: "codecov/codecov-action@v4.3.0"
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
