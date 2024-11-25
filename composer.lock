@@ -5673,7 +5673,7 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2",
-        "ext-swoole": "^5.1"
+        "ext-swoole": "~5.1"
     },
     "platform-dev": [],
     "plugin-api-version": "2.6.0"

@@ -43,7 +43,7 @@
     },
     "require": {
         "php": "^8.2",
-        "ext-swoole": "^5.1",
+        "ext-swoole": "~5.1",
         "psr/log": "3.0.0"
     },
     "require-dev": {
