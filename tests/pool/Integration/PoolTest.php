@@ -54,6 +54,62 @@ class PoolTest extends TestCase
         static::assertNull($item);
     }
 
+    public function testBorrowAndRemoveItem(): void
+    {
+        $pool = $this->createSimplePool(size: 1);
+
+        /** @var stdClass&object{id: non-empty-string} $item */
+        $item = $pool->borrow();
+
+        static::assertObjectHasProperty('id', $item);
+        static::assertGreaterThan(0, mb_strlen($item->id));
+
+        $itemId = $item->id;
+
+        $pool->removeItem($item);
+
+        static::assertNull($item);
+        static::assertEquals(0, $pool->getIdleCount());
+
+        /** @var stdClass&object{id: non-empty-string} $newItem */
+        $newItem = $pool->borrow();
+
+        static::assertNotEquals($itemId, $newItem->id);
+    }
+
+    public function testRemoveForeignItem(): void
+    {
+        $factory = new /**
+         * @implements PoolItemFactoryInterface<stdClass>
+         */ class() implements PoolItemFactoryInterface {
+            public int $itemId = 0;
+
+            /**
+             * @return stdClass
+             */
+            public function create(): mixed
+            {
+                $obj = new stdClass();
+                $obj->id = ++$this->itemId;
+
+                return $obj;
+            }
+        };
+
+        $pool = $this->createSimplePool(size: 1, factory: $factory);
+
+        /** @var stdClass&object{id: non-empty-string} $foreignItem */
+        $foreignItem = $factory->create();
+        $foreignItemId = $foreignItem->id;
+
+        $pool->removeItem($foreignItem);
+
+        /** @var stdClass&object{id: non-empty-string} $item */
+        $item = $pool->borrow();
+
+        static::assertNotEquals($foreignItemId, $item->id);
+    }
+
     public function testThatDifferentItemsUsedInCoroutines(): void
     {
         $factory = new /**

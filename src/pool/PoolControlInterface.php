@@ -30,6 +30,11 @@ interface PoolControlInterface
     public function decreaseItems(): bool;
 
     /**
+     * @param TItem|null $poolItemRef
+     */
+    public function removeItem(mixed &$poolItemRef): void;
+
+    /**
      * @return SplObjectStorage<PoolItemWrapperInterface<TItem>, float>
      */
     public function getIdledItemStorage(): SplObjectStorage;

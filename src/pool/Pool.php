@@ -147,30 +147,14 @@ class Pool implements PoolInterface, PoolControlInterface
      */
     public function return(mixed &$poolItemRef): void
     {
-        if ($poolItemRef === null) {
+        $poolItemWrapper = $this->returnBorrowedItem($poolItemRef);
+
+        if (is_null($poolItemWrapper)) {
             return;
         }
-
-        $poolItem = $poolItemRef;
-        $poolItemRef = null;
-
-        if (!$this->borrowedItemStorage->contains($poolItem)) {
-            return;
-        }
-
-        /** @var PoolItemWrapperInterface<TItem> $poolItemWrapper */
-        $poolItemWrapper = $this->borrowedItemStorage[$poolItem];
-
-        $this->borrowedItemStorage->detach($poolItem);
-
-        unset($this->itemToCoroutineBindings[Coroutine::getCid()]);
 
         if ($this->concurrentBag->isFull()) {
             return;
-        }
-
-        if ($poolItemWrapper->getState() != PoolItemState::IN_USE) {
-            throw new LogicException();
         }
 
         $this->metrics->itemInUseTotalSec += $poolItemWrapper->stats()['current_state_duration_sec'];
@@ -308,6 +292,54 @@ class Pool implements PoolInterface, PoolControlInterface
         $this->removePoolItemWrapper($poolItemWrapper);
 
         return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function removeItem(mixed &$poolItemRef): void
+    {
+        $poolItemWrapper = $this->returnBorrowedItem($poolItemRef);
+
+        if (is_null($poolItemWrapper)) {
+            return;
+        }
+
+        $this->metrics->itemInUseTotalSec += $poolItemWrapper->stats()['current_state_duration_sec'];
+
+        $this->removePoolItemWrapper($poolItemWrapper);
+    }
+
+    /**
+     * @param  TItem|null  $poolItemRef
+     *
+     * @return PoolItemWrapperInterface<TItem>|null
+     */
+    protected function returnBorrowedItem(mixed &$poolItemRef): ?PoolItemWrapperInterface
+    {
+        if ($poolItemRef === null) {
+            return null;
+        }
+
+        $poolItem = $poolItemRef;
+        $poolItemRef = null;
+
+        if (!$this->borrowedItemStorage->contains($poolItem)) {
+            return null;
+        }
+
+        /** @var PoolItemWrapperInterface<TItem> $poolItemWrapper */
+        $poolItemWrapper = $this->borrowedItemStorage[$poolItem];
+
+        $this->borrowedItemStorage->detach($poolItem);
+
+        unset($this->itemToCoroutineBindings[Coroutine::getCid()]);
+
+        if ($poolItemWrapper->getState() != PoolItemState::IN_USE) {
+            throw new LogicException();
+        }
+
+        return $poolItemWrapper;
     }
 
     /**
